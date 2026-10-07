@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GTA San Andreas Village Map</title>
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <!-- Main Map Container -->
+    <div id="map"></div>
+
+    <!-- GTA HUD Overlay Header -->
+    <div class="gta-hud">
+      <div class="hud-title">LOS VILLAGE RADAR</div>
+      <div class="hud-stats">
+        <span id="route-distance">DISTANCE: -- M</span>
+        <span id="route-time">TIME: -- SEC</span>
+      </div>
+    </div>
+
+    <!-- Control Sidebar -->
+    <div class="controls-panel">
+      <h3>🗺️ NAVIGATION PANEL</h3>
+      
+      <div class="input-group">
+        <label>Selected Destination:</label>
+        <div id="dest-label" class="poi-label-box">Click a POI or point on map</div>
+      </div>
+
+      <div class="btn-group">
+        <button id="btn-route" class="btn btn-primary" disabled>FIND ROUTE</button>
+        <button id="btn-clear" class="btn btn-danger">CLEAR ROUTE</button>
+      </div>
+
+      <hr class="divider"/>
+
+      <h4>📍 POINTS OF INTEREST</h4>
+      <div id="poi-list" class="poi-list">
+        <p class="loading">Loading POIs from Go Backend...</p>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
