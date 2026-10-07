@@ -2,7 +2,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Impact', 'Trebuchet MS', Arial, sans-serif;
+  font-family: 'Open sans', 'Trebuchet MS', Arial, sans-serif;
 }
 
 body, html {
@@ -17,12 +17,12 @@ body, html {
   height: 100vh;
 }
 
-/* GTA San Andreas HUD Styling */
+/* GTA HUD */
 .gta-hud {
   position: absolute;
   top: 20px;
   right: 20px;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.88);
   border: 3px solid #ffcc00;
   padding: 12px 20px;
   border-radius: 4px;
@@ -45,13 +45,21 @@ body, html {
   font-size: 0.95rem;
 }
 
-/* Control Panel Drawer */
+.ws-status {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: #ffcc00;
+  border-top: 1px dashed #444;
+  padding-top: 4px;
+}
+
+/* Controls Drawer */
 .controls-panel {
   position: absolute;
   top: 20px;
   left: 20px;
-  width: 320px;
-  background: rgba(15, 15, 20, 0.92);
+  width: 340px;
+  background: rgba(15, 15, 20, 0.94);
   border: 2px solid #ffcc00;
   border-radius: 6px;
   padding: 18px;
@@ -66,13 +74,28 @@ body, html {
   color: #ffcc00;
   font-size: 1.3rem;
   margin-bottom: 12px;
-  letter-spacing: 1px;
 }
 
 .controls-panel h4 {
   color: #aaa;
-  font-size: 1rem;
-  margin-bottom: 10px;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
+
+.search-box {
+  width: 100%;
+  padding: 8px 12px;
+  background: #1a1e29;
+  border: 1px solid #3a3f50;
+  color: #fff;
+  border-radius: 4px;
+  font-family: sans-serif;
+  font-size: 0.9rem;
+}
+
+.search-box:focus {
+  outline: none;
+  border-color: #ffcc00;
 }
 
 .input-group {
@@ -80,7 +103,7 @@ body, html {
 }
 
 .input-group label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #bbb;
   display: block;
   margin-bottom: 4px;
@@ -90,7 +113,7 @@ body, html {
   background: #1e222d;
   padding: 8px 12px;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #ffcc00;
   border: 1px solid #3a3f50;
   word-break: break-all;
@@ -99,7 +122,7 @@ body, html {
 .btn-group {
   display: flex;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .btn {
@@ -118,30 +141,23 @@ body, html {
   cursor: not-allowed;
 }
 
-.btn-primary {
-  background: #ffcc00;
-  color: #000;
-}
-.btn-primary:hover:not(:disabled) {
-  background: #ffe066;
-}
+.btn-primary { background: #ffcc00; color: #000; }
+.btn-primary:hover:not(:disabled) { background: #ffe066; }
 
-.btn-danger {
-  background: #e63946;
-  color: #fff;
-}
-.btn-danger:hover {
-  background: #ff4d5e;
-}
+.btn-danger { background: #e63946; color: #fff; }
+.btn-danger:hover { background: #ff4d5e; }
+
+.btn-success { background: #2a9d8f; color: #fff; width: 100%; }
+.btn-success:hover { background: #38b000; }
 
 .divider {
   border: 0;
   height: 1px;
   background: #333;
-  margin: 15px 0;
+  margin: 14px 0;
 }
 
-/* POI List Items */
+/* Directory List Items */
 .poi-list {
   display: flex;
   flex-direction: column;
@@ -174,29 +190,336 @@ body, html {
 .poi-info span {
   font-size: 0.75rem;
   color: #888;
+  font-family: sans-serif;
+}
+
+.poi-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .poi-badge {
   background: #ffcc00;
   color: #000;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   padding: 2px 6px;
   border-radius: 3px;
   font-weight: bold;
   text-transform: uppercase;
 }
 
-/* Custom GTA Marker Pin styling */
+.btn-photo {
+  background: #3a3f50;
+  border: none;
+  color: #fff;
+  border-radius: 3px;
+  padding: 3px 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.btn-photo:hover { background: #ffcc00; color: #000; }
+
+/* Custom Marker Pins */
 .gta-marker {
-  width: 32px;
-  height: 32px;
-  background-size: contain;
-  background-repeat: no-repeat;
+  font-size: 24px;
   cursor: pointer;
   filter: drop-shadow(0px 3px 4px rgba(0,0,0,0.8));
   transition: transform 0.2s ease;
 }
 
-.gta-marker:hover {
-  transform: scale(1.25);
+.gta-marker:hover { transform: scale(1.3); }
+
+/* Live Vehicle Marker */
+.vehicle-marker {
+  width: 32px;
+  height: 32px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff0055"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4h14v4z"/></svg>');
+  background-size: contain;
+  background-repeat: no-repeat;
+  transition: transform 0.3s linear;
+}
+
+/* Modal Windows */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.85);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.hidden { display: none; }
+
+.modal-content {
+  background: #151922;
+  border: 2px solid #ffcc00;
+  border-radius: 8px;
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+  color: #fff;
+  box-shadow: 0 0 25px rgba(255, 204, 0, 0.2);
+}
+
+.close-btn {
+  position: absolute;
+  top: 12px; right: 16px;
+  font-size: 1.8rem;
+  color: #aaa;
+  cursor: pointer;
+}
+.close-btn:hover { color: #ffcc00; }
+
+.modal-subtext {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-bottom: 12px;
+  font-family: sans-serif;
+}
+
+/* Gallery Grid */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.gallery-grid img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #3a3f50;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  color: #ccc;
+  margin-bottom: 4px;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+  width: 100%;
+  padding: 8px;
+  background: #1e222d;
+  border: 1px solid #3a3f50;
+  color: #fff;
+  border-radius: 4px;
+  font-family: sans-serif;
+}
+
+.form-group small {
+  color: #ffcc00;
+  font-size: 0.75rem;
+  font-family: sans-serif;
+}
+
+/* Emergency Dispatch + Inspection + CCTV + Transit UI */
+.feature-info-card {
+  position: fixed;
+  right: 26px;
+  bottom: 24px;
+  width: min(360px, calc(100vw - 32px));
+  background: rgba(12, 15, 22, 0.96);
+  border: 2px solid #43d9ff;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  color: #fff;
+}
+
+.feature-info-card.hidden {
+  display: none;
+}
+
+.feature-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.feature-info-header h3 {
+  margin: 0;
+  color: #ffcc00;
+  font-size: 1.1rem;
+}
+
+.feature-info-header p {
+  margin: 4px 0 0;
+  color: #9db2d1;
+  font-size: 0.75rem;
+}
+
+.feature-info-header button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.8rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.feature-info-body {
+  padding: 16px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.feature-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.status-pill.critical {
+  background: rgba(255, 76, 76, 0.18);
+  color: #ff8f8f;
+}
+
+.status-pill.warning {
+  background: rgba(255, 186, 73, 0.16);
+  color: #ffd166;
+}
+
+.status-pill.info {
+  background: rgba(73, 175, 255, 0.18);
+  color: #8bc7ff;
+}
+
+.status-pill.success {
+  background: rgba(72, 208, 119, 0.18);
+  color: #7ef0b2;
+}
+
+.status-pill.type {
+  background: rgba(115, 118, 255, 0.18);
+  color: #b7b7ff;
+}
+
+.feature-meta-box {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+
+.incident-marker,
+.cctv-marker,
+.bus-stop-marker,
+.bus-vehicle-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(0,0,0,0.5);
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.incident-marker {
+  background: rgba(255, 74, 74, 0.18);
+  border: 2px solid rgba(255, 99, 99, 0.95);
+}
+
+.incident-warning {
+  background: rgba(255, 183, 53, 0.18);
+  border-color: rgba(255, 183, 53, 0.95);
+}
+
+.incident-info {
+  background: rgba(89, 168, 255, 0.18);
+  border-color: rgba(89, 168, 255, 0.95);
+}
+
+.cctv-marker {
+  background: rgba(35, 211, 136, 0.18);
+  border: 2px solid rgba(35, 211, 136, 0.9);
+}
+
+.bus-stop-marker {
+  background: rgba(255, 204, 0, 0.2);
+  border: 2px solid rgba(255, 204, 0, 0.95);
+}
+
+.bus-vehicle-marker {
+  width: 28px;
+  height: 28px;
+  border: 2px solid rgba(255,255,255,0.7);
+  font-size: 16px;
+  color: #111;
+}
+
+.cctv-feed {
+  position: relative;
+  height: 120px;
+  width: 100%;
+  background: linear-gradient(180deg, rgba(15,30,40,0.96), rgba(0,0,0,0.92));
+  border: 1px solid rgba(75, 228, 155, 0.7);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.feed-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 255, 170, 0.12) 0, rgba(0, 255, 170, 0.12) 1px, transparent 1px, transparent 16px),
+    linear-gradient(rgba(0,255,170,0.08) 0, rgba(0,255,170,0.08) 1px, transparent 1px, transparent 16px);
+  background-size: 24px 24px;
+}
+
+.feed-scanline {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 100%;
+  height: 18%;
+  background: linear-gradient(180deg, transparent, rgba(96, 251, 197, 0.32), transparent);
+  animation: scan 2.5s linear infinite;
+}
+
+@keyframes scan {
+  0% { transform: translateY(-110%); }
+  100% { transform: translateY(120%); }
+}
+
+.eta-list {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: #dfeaff;
+}
+
+.eta-list li + li {
+  margin-top: 4px;
 }

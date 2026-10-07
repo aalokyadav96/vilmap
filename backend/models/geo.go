@@ -1,24 +1,22 @@
 package models
 
-// GeoJSON Point Geometry
 type GeometryPoint struct {
 	Type        string    `json:"type"`        // "Point"
-	Coordinates []float64 `json:"coordinates"` // [longitude, latitude]
+	Coordinates []float64 `json:"coordinates"` // [lng, lat]
 }
 
-// GeoJSON LineString Geometry
 type GeometryLineString struct {
 	Type        string      `json:"type"`        // "LineString"
-	Coordinates [][]float64 `json:"coordinates"` // [[lng, lat], [lng, lat], ...]
+	Coordinates [][]float64 `json:"coordinates"` // [[lng, lat], ...]
 }
 
-// Point of Interest (Home, Shop, Barber, GTA Radar Icon, etc.)
 type POIProperties struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Category    string `json:"category"` // e.g., "shop", "home", "hospital", "barber"
-	Icon        string `json:"icon"`     // GTA icon key or custom SVG URL
-	Description string `json:"description"`
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Category    string   `json:"category"` // "shop", "home", "hospital", "barber"
+	Icon        string   `json:"icon"`     // GTA icon key or custom SVG URL
+	Description string   `json:"description"`
+	Images      []string `json:"images"` // Array of photo URLs
 }
 
 type POIFeature struct {
@@ -32,11 +30,21 @@ type POIFeatureCollection struct {
 	Features []POIFeature `json:"features"`
 }
 
-// Routing Data Structures
+// Live tracking payload for WebSockets
+type VehicleLocation struct {
+	VehicleID string  `json:"vehicle_id"`
+	Type      string  `json:"type"` // "patrol", "delivery", "bus"
+	Lat       float64 `json:"lat"`
+	Lng       float64 `json:"lng"`
+	Heading   float64 `json:"heading"` // 0-360 degrees
+	Speed     float64 `json:"speed"`   // km/h
+}
+
+// Route structs remain standard GeoJSON responses
 type RouteStep struct {
 	Instruction string    `json:"instruction"`
 	DistanceM   float64   `json:"distance_m"`
-	Location    []float64 `json:"location"` // [lng, lat]
+	Location    []float64 `json:"location"`
 }
 
 type RouteProperties struct {
@@ -46,12 +54,11 @@ type RouteProperties struct {
 }
 
 type RouteResponse struct {
-	Type       string             `json:"type"` // "Feature"
+	Type       string             `json:"type"`
 	Geometry   GeometryLineString `json:"geometry"`
 	Properties RouteProperties    `json:"properties"`
 }
 
-// Street Node for Pathfinding Graph
 type StreetNode struct {
 	ID        string
 	Lng       float64

@@ -6,13 +6,14 @@ export interface POIProperties {
   category: string;
   icon: string;
   description: string;
+  images?: string[];
 }
 
 export interface POIFeature {
   type: 'Feature';
   geometry: {
     type: 'Point';
-    coordinates: [number, number]; // [lng, lat]
+    coordinates: [number, number];
   };
   properties: POIProperties;
 }
@@ -20,12 +21,6 @@ export interface POIFeature {
 export interface POIFeatureCollection {
   type: 'FeatureCollection';
   features: POIFeature[];
-}
-
-export interface RouteStep {
-  instruction: string;
-  distance_m: number;
-  location: [number, number];
 }
 
 export interface RouteResponse {
@@ -37,23 +32,40 @@ export interface RouteResponse {
   properties: {
     total_distance_m: number;
     duration_sec: number;
-    steps: RouteStep[];
   };
 }
 
-// Fetch POI list from Go Backend
+export interface VehicleLocation {
+  vehicle_id: string;
+  type: string;
+  lat: number;
+  lng: number;
+  heading: number;
+  speed: number;
+}
+
+// Fetch all POIs
 export async function fetchPOIs(): Promise<POIFeatureCollection> {
   const res = await fetch(`${API_BASE}/pois`);
-  if (!res.ok) throw new Error('Failed to fetch POIs from server');
+  if (!res.ok) throw new Error('Failed to fetch POIs');
   return res.json();
 }
 
-// Fetch Shortest Route from Go Dijkstra Engine
+// Create new POI
+export async function createPOI(poi: POIFeature): Promise<POIFeature> {
+  const res = await fetch(`${API_BASE}/pois`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(poi),
+  });
+  if (!res.ok) throw new Error('Failed to create POI');
+  return res.json();
+}
+
+// Get Route
 export async function fetchRoute(
-  startLng: number,
-  startLat: number,
-  endLng: number,
-  endLat: number
+  startLng: number, startLat: number,
+  endLng: number, endLat: number
 ): Promise<RouteResponse> {
   const url = `${API_BASE}/route?start_lat=${startLat}&start_lng=${startLng}&end_lat=${endLat}&end_lng=${endLng}`;
   const res = await fetch(url);

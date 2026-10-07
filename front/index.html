@@ -8,25 +8,30 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <!-- Main Map Container -->
     <div id="map"></div>
 
-    <!-- GTA HUD Overlay Header -->
+    <!-- HUD Overlay Header -->
     <div class="gta-hud">
       <div class="hud-title">LOS VILLAGE RADAR</div>
       <div class="hud-stats">
         <span id="route-distance">DISTANCE: -- M</span>
         <span id="route-time">TIME: -- SEC</span>
       </div>
+      <div class="ws-status" id="ws-status">PATROL TRACKER: CONNECTING...</div>
     </div>
 
     <!-- Control Sidebar -->
     <div class="controls-panel">
       <h3>🗺️ NAVIGATION PANEL</h3>
-      
+
+      <div class="input-group">
+        <label>Search Village Directory:</label>
+        <input type="text" id="search-input" class="search-box" placeholder="Search homes, shops, category..." />
+      </div>
+
       <div class="input-group">
         <label>Selected Destination:</label>
-        <div id="dest-label" class="poi-label-box">Click a POI or point on map</div>
+        <div id="dest-label" class="poi-label-box">Click a POI or map spot</div>
       </div>
 
       <div class="btn-group">
@@ -34,11 +39,67 @@
         <button id="btn-clear" class="btn btn-danger">CLEAR ROUTE</button>
       </div>
 
+      <button id="btn-open-create-modal" class="btn btn-success">+ ADD NEW VILLAGE POI</button>
+
       <hr class="divider"/>
 
-      <h4>📍 POINTS OF INTEREST</h4>
+      <h4>📍 POINTS OF INTEREST DIRECTORY</h4>
       <div id="poi-list" class="poi-list">
         <p class="loading">Loading POIs from Go Backend...</p>
+      </div>
+    </div>
+
+    <!-- Modal 1: Photo / Gallery Viewer -->
+    <div id="gallery-modal" class="modal hidden">
+      <div class="modal-content">
+        <span id="close-gallery-modal" class="close-btn">&times;</span>
+        <h3 id="gallery-title">Street-Level Gallery</h3>
+        <p id="gallery-desc" class="modal-subtext"></p>
+        <div id="gallery-grid" class="gallery-grid"></div>
+      </div>
+    </div>
+
+    <!-- Modal 2: Create New POI Form -->
+    <div id="create-modal" class="modal hidden">
+      <div class="modal-content">
+        <span id="close-create-modal" class="close-btn">&times;</span>
+        <h3>Add New Village Location</h3>
+        <form id="create-poi-form">
+          <div class="form-group">
+            <label>Location Name</label>
+            <input type="text" id="poi-name" required placeholder="e.g. Village General Store" />
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="poi-category">
+              <option value="home">Home / Residence</option>
+              <option value="shop">Shop / Market</option>
+              <option value="service">Service / Barber / Hospital</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Icon Style</label>
+            <select id="poi-icon">
+              <option value="gta-house">House 🏠</option>
+              <option value="gta-pizza">Pizza / Food 🍕</option>
+              <option value="gta-barber">Barber 💈</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Coordinates (Lng, Lat)</label>
+            <input type="text" id="poi-coords" required placeholder="76.1540, 28.2420" />
+            <small>Click anywhere on the map to pick exact coordinates</small>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="poi-desc" rows="2" placeholder="Street description or details..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Photo URL (Optional)</label>
+            <input type="url" id="poi-image" placeholder="https://..." />
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">SUBMIT TO VILLAGE MAP</button>
+        </form>
       </div>
     </div>
 

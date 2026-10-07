@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"vilmap/models"
@@ -15,20 +16,23 @@ type POIHandler struct {
 }
 
 func NewPOIHandler() *POIHandler {
-	// Seed with sample village points (replace with DB queries in production)
 	initialPOIs := []models.POIFeature{
 		{
 			Type: "Feature",
 			Geometry: models.GeometryPoint{
 				Type:        "Point",
-				Coordinates: []float64{76.1532, 28.2415}, // [Lng, Lat]
+				Coordinates: []float64{76.1532, 28.2415},
 			},
 			Properties: models.POIProperties{
 				ID:          "poi_1",
 				Name:        "CJ's Safehouse",
 				Category:    "home",
 				Icon:        "gta-house",
-				Description: "Village main residence",
+				Description: "Main Grove Street residence in the village.",
+				Images: []string{
+					"https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=600&q=80",
+					"https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80",
+				},
 			},
 		},
 		{
@@ -42,7 +46,10 @@ func NewPOIHandler() *POIHandler {
 				Name:        "Well Stacked Pizza Co.",
 				Category:    "shop",
 				Icon:        "gta-pizza",
-				Description: "Village eatery & general store",
+				Description: "Village eatery, pizza counter & general store.",
+				Images: []string{
+					"https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
+				},
 			},
 		},
 		{
@@ -56,17 +63,17 @@ func NewPOIHandler() *POIHandler {
 				Name:        "Reece's Haircut Barbershop",
 				Category:    "service",
 				Icon:        "gta-barber",
-				Description: "Local Barber Shop",
+				Description: "Classic village barber shop and styling.",
+				Images: []string{
+					"https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80",
+				},
 			},
 		},
 	}
 
-	return &POIHandler{
-		pois: initialPOIs,
-	}
+	return &POIHandler{pois: initialPOIs}
 }
 
-// GET /api/pois - Return all points in standard GeoJSON
 func (h *POIHandler) GetPOIs(w http.ResponseWriter, r *http.Request) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -80,7 +87,6 @@ func (h *POIHandler) GetPOIs(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(collection)
 }
 
-// POST /api/pois - Add new POI
 func (h *POIHandler) CreatePOI(w http.ResponseWriter, r *http.Request) {
 	var newPOI models.POIFeature
 	if err := json.NewDecoder(r.Body).Decode(&newPOI); err != nil {
@@ -88,10 +94,12 @@ func (h *POIHandler) CreatePOI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.mu.Lock()
 	newPOI.Type = "Feature"
 	newPOI.Geometry.Type = "Point"
-
-	h.mu.Lock()
+	if newPOI.Properties.ID == "" {
+		newPOI.Properties.ID = fmt.Sprintf("poi_%d", len(h.pois)+1)
+	}
 	h.pois = append(h.pois, newPOI)
 	h.mu.Unlock()
 
@@ -100,7 +108,6 @@ func (h *POIHandler) CreatePOI(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(newPOI)
 }
 
-// GET /api/pois/{id} - Return single POI
 func (h *POIHandler) GetPOIByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
