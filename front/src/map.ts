@@ -12,7 +12,6 @@ export class VillageMap {
   
   private vehicleMarkers: Map<string, maplibregl.Marker> = new Map();
   private vehicleTrails: Map<string, [number, number][]> = new Map();
-  private incidentMarkers: maplibregl.Marker[] = [];
   private cctvMarkers: maplibregl.Marker[] = [];
   private busStopMarkers: maplibregl.Marker[] = [];
   private busMarkers: maplibregl.Marker[] = [];
@@ -60,6 +59,7 @@ export class VillageMap {
     },
   ];
 
+  // Expanded incident dataset to demonstrate clustering density
   private incidentData: IncidentData[] = [
     {
       id: 'incident-1',
@@ -88,6 +88,24 @@ export class VillageMap {
       coords: [76.1543, 28.2429],
       icon: '🚦',
     },
+    {
+      id: 'incident-4',
+      title: 'Power Outage Cluster A',
+      description: 'Substation transformer trip affecting block 4.',
+      type: 'Utility',
+      severity: 'critical',
+      coords: [76.1522, 28.2431],
+      icon: '⚡',
+    },
+    {
+      id: 'incident-5',
+      title: 'Minor Fender Bender',
+      description: 'Two vehicles blocking secondary junction.',
+      type: 'Traffic',
+      severity: 'info',
+      coords: [76.1525, 28.2433],
+      icon: '🚗',
+    }
   ];
 
   private cctvData: CameraFeed[] = [
@@ -138,7 +156,7 @@ export class VillageMap {
 
     this.map.on('load', () => {
       this.initRouteLayers();
-      this.initEmergencyDispatch();
+      this.initClusteredIncidents(); // Replaced DOM loop with high-performance clustering
       this.initPropertyInspection();
       this.initCCTVSystem();
       this.initTransitTracker();
@@ -168,6 +186,135 @@ export class VillageMap {
         'line-opacity': 0.85,
       },
     });
+  }
+
+  /**
+   * High-Performance Clustered Incidents System
+   * Replaces DOM markers with native GeoJSON clustering for GPU-accelerated rendering.
+   */
+  private initClusteredIncidents() {
+    const features = this.incidentData.map((incident) => ({
+      type: 'Feature' as const,
+      properties: {
+        id: incident.id,
+        title: incident.title,
+        description: incident.description,
+        type: incident.type,
+        severity: incident.severity,
+        icon: incident.icon,
+      },
+      geometry: {
+        type: 'Point' as const,
+        coordinates: incident.coords,
+      },
+    }));
+
+    this.map.addSource('incidents-source', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features },
+      cluster: true,
+      clusterMaxZoom: 17,
+      clusterRadius: 50,
+    });
+
+    // Layer for cluster bubbles
+    this.map.addLayer({
+      id: 'incident-clusters',
+      type: 'circle',
+      source: 'incidents-source',
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': [
+          'step',
+          ['get', 'point_count'],
+          '#3b82f6',
+          5,
+          '#f59e0b',
+          10,
+          '#ef4444',
+        ],
+        'circle-radius': ['step', ['get', 'point_count'], 18, 5, 24, 10, 30],
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff',
+      },
+    });
+
+    // Layer for cluster count labels
+    this.map.addLayer({
+      id: 'incident-cluster-count',
+      type: 'symbol',
+      source: 'incidents-source',
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': '{point_count_abbreviated}',
+        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-size': 12,
+      },
+      paint: {
+        'text-color': '#ffffff',
+      },
+    });
+
+    // Layer for individual unclustered incident points
+    this.map.addLayer({
+      id: 'incident-unclustered',
+      type: 'circle',
+      source: 'incidents-source',
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-color': [
+          'match',
+          ['get', 'severity'],
+          'critical', '#ef4444',
+          'warning', '#f59e0b',
+          '#3b82f6',
+        ],
+        'circle-radius': 10,
+        'circle-stroke-width': 2,
+        'circle-stroke-color': '#ffffff',
+      },
+    });
+
+    // Click cluster to zoom in
+    this.map.on('click', 'incident-clusters', async (e) => {
+      const features = this.map.queryRenderedFeatures(e.point, { layers: ['incident-clusters'] });
+      const clusterId = features[0].properties.cluster_id;
+      const source = this.map.getSource('incidents-source') as maplibregl.GeoJSONSource;
+      
+      const zoom = await source.getClusterExpansionZoom(clusterId);
+      this.map.easeTo({
+        center: (features[0].geometry as any).coordinates,
+        zoom: zoom,
+      });
+    });
+
+    // Click individual incident to show info card
+    this.map.on('click', 'incident-unclustered', (e) => {
+      const feature = e.features?.[0];
+      if (!feature || !feature.properties) return;
+      const props = feature.properties;
+      const coords = (feature.geometry as any).coordinates;
+
+      this.infoManager.showInfoCard(
+        String(props.title),
+        `${props.type} - ${String(props.severity).toUpperCase()}`,
+        `
+          <div class="feature-meta-row">
+            <span class="status-pill ${props.severity}">${props.severity}</span>
+            <span class="status-pill type">${props.type}</span>
+          </div>
+          <p>${props.description}</p>
+          <div class="feature-meta-box"><strong>Dispatch Status:</strong> Crew en route</div>
+          <div class="feature-meta-box"><strong>Location:</strong> ${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}</div>
+        `
+      );
+    });
+
+    // Change cursor on hover over clusters and incidents
+    this.map.on('mouseenter', 'incident-clusters', () => { this.map.getCanvas().style.cursor = 'pointer'; });
+    this.map.on('mouseleave', 'incident-clusters', () => { this.map.getCanvas().style.cursor = ''; });
+    this.map.on('mouseenter', 'incident-unclustered', () => { this.map.getCanvas().style.cursor = 'pointer'; });
+    this.map.on('mouseleave', 'incident-unclustered', () => { this.map.getCanvas().style.cursor = ''; });
   }
 
   private initTrailSource() {
@@ -266,35 +413,6 @@ export class VillageMap {
       .catch((err) => console.error('Failed to load turf territories:', err));
 
     startTurfAnimation(this.map);
-  }
-
-  private initEmergencyDispatch() {
-    this.incidentData.forEach((incident) => {
-      const el = document.createElement('div');
-      el.className = `incident-marker incident-${incident.severity}`;
-      el.innerHTML = incident.icon;
-      el.title = incident.title;
-
-      el.addEventListener('click', (event) => {
-        event.stopPropagation();
-        this.infoManager.showInfoCard(
-          incident.title,
-          `${incident.type} - ${incident.severity.toUpperCase()}`,
-          `
-            <div class="feature-meta-row">
-              <span class="status-pill ${incident.severity}">${incident.severity}</span>
-              <span class="status-pill type">${incident.type}</span>
-            </div>
-            <p>${incident.description}</p>
-            <div class="feature-meta-box"><strong>Dispatch Status:</strong> Crew en route</div>
-            <div class="feature-meta-box"><strong>Location:</strong> ${incident.coords[0].toFixed(4)}, ${incident.coords[1].toFixed(4)}</div>
-          `
-        );
-      });
-
-      const marker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat(incident.coords).addTo(this.map);
-      this.incidentMarkers.push(marker);
-    });
   }
 
   private initPropertyInspection() {
@@ -456,11 +574,13 @@ export class VillageMap {
     this.busVehicles.forEach((vehicle) => {
       const el = document.createElement('div');
       el.className = 'bus-vehicle-marker';
-      el.style.background = vehicle.color;
-      el.style.transformOrigin = 'center center';
-      el.style.transition = 'transform 1s linear';
-      el.innerHTML = '🚌';
-      el.title = `${vehicle.route} bus`;
+
+      const inner = document.createElement('div');
+      inner.className = 'bus-vehicle-marker-inner';
+      inner.style.background = vehicle.color;
+      inner.textContent = '🚌';
+      inner.title = `${vehicle.route} bus`;
+      el.appendChild(inner);
 
       el.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -558,8 +678,10 @@ export class VillageMap {
     if (!marker) {
       const el = document.createElement('div');
       el.className = 'vehicle-marker';
-      el.style.transformOrigin = 'center center';
-      el.style.transition = 'transform 0.8s linear';
+
+      const icon = document.createElement('div');
+      icon.className = 'vehicle-marker-inner';
+      el.appendChild(icon);
 
       marker = new maplibregl.Marker({ element: el })
         .setLngLat([v.lng, v.lat])
@@ -567,11 +689,14 @@ export class VillageMap {
         .addTo(this.map);
 
       this.vehicleMarkers.set(v.vehicle_id, marker);
-    } else {
-      marker.setLngLat([v.lng, v.lat]);
-      const el = marker.getElement();
-      el.style.transform = `rotate(${v.heading}deg)`;
     }
+
+    const el = marker.getElement();
+    const icon = el.querySelector('.vehicle-marker-inner') as HTMLElement | null;
+    if (icon) {
+      icon.style.transform = `rotate(${v.heading}deg)`;
+    }
+    marker.setLngLat([v.lng, v.lat]);
   }
 
   public setMapClickListener(callback: (coords: [number, number]) => void) {

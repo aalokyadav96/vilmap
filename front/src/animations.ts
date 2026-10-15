@@ -16,32 +16,54 @@ export function interpolateAlongPath(path: [number, number][], progress: number)
   ];
 }
 
+/**
+ * Smooth 60fps transit animation using requestAnimationFrame and delta-time.
+ */
 export function startTransitAnimation(
   busVehicles: BusVehicle[],
   busMarkers: maplibregl.Marker[]
 ) {
-  const tick = () => {
+  let lastTime = performance.now();
+  const speedFactor = 0.000065;
+
+  const animate = (currentTime: number) => {
+    const deltaTime = Math.min(currentTime - lastTime, 40);
+    lastTime = currentTime;
+
     busVehicles.forEach((vehicle, index) => {
       const marker = busMarkers[index];
       if (!marker) return;
 
-      vehicle.progress = (vehicle.progress + 0.003) % 1;
-      const current = interpolateAlongPath(vehicle.path, vehicle.progress);
+      const nextProgress = (vehicle.progress + deltaTime * speedFactor) % 1;
+      vehicle.progress = nextProgress;
+
+      const current = interpolateAlongPath(vehicle.path, nextProgress);
       marker.setLngLat(current);
+
+      const markerEl = marker.getElement();
+      const busIcon = markerEl?.querySelector('.bus-vehicle-marker-inner') as HTMLElement | null;
+      if (busIcon) {
+        const nextPoint = interpolateAlongPath(vehicle.path, (nextProgress + 0.02) % 1);
+        const dx = nextPoint[0] - current[0];
+        const dy = nextPoint[1] - current[1];
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+        busIcon.style.transform = `rotate(${angle}deg)`;
+      }
     });
+
+    requestAnimationFrame(animate);
   };
 
-  window.setInterval(tick, 1200);
+  requestAnimationFrame(animate);
 }
 
+/**
+ * Smooth breathing opacity pulse for turf territories using a sine wave.
+ */
 export function startTurfAnimation(map: maplibregl.Map) {
-  let opacity = 0.35;
-  let increasing = false;
-
-  window.setInterval(() => {
-    opacity += increasing ? 0.05 : -0.05;
-    if (opacity >= 0.65) increasing = false;
-    if (opacity <= 0.2) increasing = true;
+  const animate = (currentTime: number) => {
+    // Generates a smooth oscillation between 0.2 and 0.65 over ~2 seconds
+    const opacity = 0.425 + 0.225 * Math.sin(currentTime * 0.003);
 
     if (map && map.getLayer('turf-fill')) {
       map.setPaintProperty('turf-fill', 'fill-opacity', [
@@ -51,5 +73,9 @@ export function startTurfAnimation(map: maplibregl.Map) {
         0.35,
       ]);
     }
-  }, 200);
+
+    requestAnimationFrame(animate);
+  };
+
+  requestAnimationFrame(animate);
 }

@@ -66,6 +66,18 @@ export interface Mission {
   active: boolean;
 }
 
+export interface IncidentData {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  severity: 'critical' | 'warning' | 'info';
+  coords: [number, number];
+  icon: string;
+}
+
+// --- API Calls ---
+
 export async function fetchMissions(): Promise<Mission[]> {
   const res = await fetch(`${API_BASE}/missions`);
   if (!res.ok) throw new Error('Failed to fetch missions');
@@ -77,6 +89,7 @@ export async function acceptMission(id: string): Promise<Mission> {
   if (!res.ok) throw new Error('Failed to accept mission');
   return res.json();
 }
+
 // Fetch all POIs
 export async function fetchPOIs(): Promise<POIFeatureCollection> {
   const res = await fetch(`${API_BASE}/pois`);
@@ -91,7 +104,9 @@ export async function createPOI(poi: POIFeature): Promise<POIFeature> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(poi),
   });
-  if (!res.ok) throw new Error('Failed to create POI');
+  if (!res.ok) {
+    throw new Error('Failed to create POI');
+  }
   return res.json();
 }
 
@@ -110,5 +125,12 @@ export async function fetchRoute(
 export async function fetchTurfs(): Promise<Territory[]> {
   const res = await fetch(`${API_BASE}/turfs`);
   if (!res.ok) throw new Error('Failed to fetch territories');
+  return res.json();
+}
+
+// Optional: Fetch live incidents from backend if migrating away from hardcoded array
+export async function fetchIncidents(): Promise<IncidentData[]> {
+  const res = await fetch(`${API_BASE}/incidents`);
+  if (!res.ok) throw new Error('Failed to fetch incidents');
   return res.json();
 }

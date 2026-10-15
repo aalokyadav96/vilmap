@@ -202,12 +202,65 @@ document.addEventListener('DOMContentLoaded', async () => {
   const missionBoardElem = document.getElementById('mission-board');
   const missionHudElem = document.getElementById('active-mission-hud');
 
+  const dummyMissions: Mission[] = [
+    {
+      id: 'baito-arcade-run',
+      title: 'Arcade Drop Run',
+      description: 'Pick up a sealed package from the neon arcade and deliver it to the harbor lockup.',
+      reward: 1800,
+      time_limit_sec: 75,
+      pickup: [76.1518, 28.2421],
+      dropoff: [76.1559, 28.2397],
+      active: true,
+    },
+    {
+      id: 'baito-grocer-burst',
+      title: 'Grocer Rush',
+      description: 'Carry fresh stock from the market to the apartment block before the midday rush.',
+      reward: 2200,
+      time_limit_sec: 90,
+      pickup: [76.1506, 28.2428],
+      dropoff: [76.1582, 28.2441],
+      active: true,
+    },
+    {
+      id: 'baito-river-swap',
+      title: 'River Swap',
+      description: 'Exchange courier parcels between the river depot and the civic station with no delays.',
+      reward: 2600,
+      time_limit_sec: 110,
+      pickup: [76.1542, 28.2402],
+      dropoff: [76.1569, 28.2446],
+      active: true,
+    },
+    {
+      id: 'baito-sunset-pickup',
+      title: 'Sunset Express',
+      description: 'Grab a hot pizza order from the strip and get it to the lookout before the timer hits zero.',
+      reward: 3100,
+      time_limit_sec: 120,
+      pickup: [76.1498, 28.2411],
+      dropoff: [76.1576, 28.2438],
+      active: true,
+    },
+    {
+      id: 'baito-dock-heat',
+      title: 'Dockside Heat',
+      description: 'Deliver a tight package to the docks while the city watch is circling the waterfront.',
+      reward: 2900,
+      time_limit_sec: 95,
+      pickup: [76.1529, 28.2395],
+      dropoff: [76.1562, 28.2409],
+      active: true,
+    },
+  ];
+
   // Load Missions from Backend
   try {
     const missions = await fetchMissions();
     renderMissionBoard(missions);
   } catch (err) {
-    if (missionBoardElem) missionBoardElem.innerHTML = `<p style="color:#ff4d5e">Failed to load missions</p>`;
+    renderMissionBoard(dummyMissions);
   }
 
   function renderMissionBoard(missions: Mission[]) {
@@ -233,7 +286,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           activeMission = await acceptMission(m.id);
           startMissionFlow(activeMission);
         } catch (err) {
-          alert('Could not start mission');
+          activeMission = { ...m, active: true };
+          startMissionFlow(activeMission);
         }
       });
 
