@@ -1,7 +1,7 @@
 // front/src/map.ts
 
 import maplibregl from 'maplibre-gl';
-import { fetchRoute, POIFeature, POIFeatureCollection, VehicleLocation } from './api';
+import { fetchRoute, POIFeature, POIFeatureCollection, VehicleLocation, Mission } from './api';
 
 type IncidentSeverity = 'critical' | 'warning' | 'info';
 
@@ -68,6 +68,7 @@ export class VillageMap {
   private cctvMarkers: maplibregl.Marker[] = [];
   private busStopMarkers: maplibregl.Marker[] = [];
   private busMarkers: maplibregl.Marker[] = [];
+  private missionMarkers: maplibregl.Marker[] = [];
   private infoCard: HTMLDivElement | null = null;
 
   private propertyData: PropertyParcel[] = [
@@ -514,8 +515,6 @@ export class VillageMap {
     });
   }
 
-  // Replace the initTransitTracker method inside VillageMap in front/src/map.ts
-
   private initTransitTracker() {
     this.busStops.forEach((stop) => {
       const el = document.createElement('div');
@@ -550,7 +549,6 @@ export class VillageMap {
       el.innerHTML = '🚌';
       el.title = `${vehicle.route} bus`;
 
-      // Add click listener to show bus and route details
       el.addEventListener('click', (event) => {
         event.stopPropagation();
         const pathStops = vehicle.path.map((coord, idx) => `<li>Waypoint ${idx + 1}: ${coord[0].toFixed(4)}, ${coord[1].toFixed(4)}</li>`).join('');
@@ -604,6 +602,38 @@ export class VillageMap {
       start[0] + (end[0] - start[0]) * segmentProgress,
       start[1] + (end[1] - start[1]) * segmentProgress,
     ];
+  }
+
+  public showMissionMarkers(mission: Mission) {
+    // Clear old mission markers if any
+    this.clearMissionMarkers();
+
+    // Pickup Marker
+    const pickupEl = document.createElement('div');
+    pickupEl.className = 'mission-marker pickup';
+    pickupEl.innerHTML = '📦';
+    pickupEl.title = `Pickup: ${mission.title}`;
+    const pickupMarker = new maplibregl.Marker({ element: pickupEl })
+      .setLngLat(mission.pickup)
+      .setPopup(new maplibregl.Popup().setText(`Pickup: ${mission.title}`))
+      .addTo(this.map);
+    this.missionMarkers.push(pickupMarker);
+
+    // Dropoff Marker
+    const dropoffEl = document.createElement('div');
+    dropoffEl.className = 'mission-marker dropoff';
+    dropoffEl.innerHTML = '🏁';
+    dropoffEl.title = `Drop-off: ${mission.title}`;
+    const dropoffMarker = new maplibregl.Marker({ element: dropoffEl })
+      .setLngLat(mission.dropoff)
+      .setPopup(new maplibregl.Popup().setText(`Drop-off: ${mission.title}`))
+      .addTo(this.map);
+    this.missionMarkers.push(dropoffMarker);
+  }
+
+  public clearMissionMarkers() {
+    this.missionMarkers.forEach((m) => m.remove());
+    this.missionMarkers = [];
   }
 
   private showInfoCard(title: string, subtitle: string, body: string) {

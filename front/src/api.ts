@@ -55,6 +55,28 @@ export interface Territory {
   polygon: [number, number][];
 }
 
+export interface Mission {
+  id: string;
+  title: string;
+  description: string;
+  reward: number;
+  time_limit_sec: number;
+  pickup: [number, number];
+  dropoff: [number, number];
+  active: boolean;
+}
+
+export async function fetchMissions(): Promise<Mission[]> {
+  const res = await fetch(`${API_BASE}/missions`);
+  if (!res.ok) throw new Error('Failed to fetch missions');
+  return res.json();
+}
+
+export async function acceptMission(id: string): Promise<Mission> {
+  const res = await fetch(`${API_BASE}/missions/${id}/accept`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to accept mission');
+  return res.json();
+}
 // Fetch all POIs
 export async function fetchPOIs(): Promise<POIFeatureCollection> {
   const res = await fetch(`${API_BASE}/pois`);

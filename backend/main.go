@@ -34,6 +34,7 @@ func main() {
 	routeHandler := handlers.NewRouteHandler()
 	trackerHandler := handlers.NewTrackerHandler()
 	turfHandler := handlers.NewTurfHandler()
+	missionHandler := handlers.NewMissionHandler()
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/pois", poiHandler.GetPOIs)
@@ -41,6 +42,9 @@ func main() {
 		r.Get("/pois/{id}", poiHandler.GetPOIByID)
 		r.Get("/route", routeHandler.CalculateRoute)
 		r.Get("/api/turfs", turfHandler.GetTurfs)
+		r.Get("/api/missions", missionHandler.GetMissions)
+		r.Post("/api/missions/{id}/accept", missionHandler.AcceptMission)
+		r.Post("/api/missions/{id}/complete", missionHandler.CompleteMission)
 	})
 
 	// WebSocket endpoint for real-time tracking

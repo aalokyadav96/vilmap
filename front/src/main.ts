@@ -1,6 +1,6 @@
 // front/src/main.ts
 
-import { createPOI, fetchPOIs, POIFeature, VehicleLocation } from './api';
+import { createPOI, fetchPOIs, fetchMissions, acceptMission, POIFeature, VehicleLocation, Mission } from './api';
 import { VillageMap } from './map';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -184,6 +184,92 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   btnRoute?.addEventListener('click', () => villageMap.drawRouteToSelected());
   btnClear?.addEventListener('click', () => villageMap.clearRoute());
+
+  // 8. Mission Panel & Baito Courier System State
+  let activeMission: Mission | null = null;
+  let countdownTimer: number | null = null;
+
+  const sidebar = document.querySelector('.controls-panel');
+  const missionSection = document.createElement('div');
+  missionSection.innerHTML = `
+    <hr class="divider"/>
+    <h4>📦 BAITO COURIER MISSIONS</h4>
+    <div id="mission-board" class="poi-list"><p class="loading">Loading missions...</p></div>
+    <div id="active-mission-hud" class="feature-meta-box hidden" style="margin-top: 10px; border-color: #ffcc00;"></div>
+  `;
+  sidebar?.appendChild(missionSection);
+
+  const missionBoardElem = document.getElementById('mission-board');
+  const missionHudElem = document.getElementById('active-mission-hud');
+
+  // Load Missions from Backend
+  try {
+    const missions = await fetchMissions();
+    renderMissionBoard(missions);
+  } catch (err) {
+    if (missionBoardElem) missionBoardElem.innerHTML = `<p style="color:#ff4d5e">Failed to load missions</p>`;
+  }
+
+  function renderMissionBoard(missions: Mission[]) {
+    if (!missionBoardElem) return;
+    missionBoardElem.innerHTML = '';
+
+    missions.forEach((m) => {
+      const item = document.createElement('div');
+      item.className = 'poi-item';
+      item.innerHTML = `
+        <div class="poi-info">
+          <strong>${m.title}</strong>
+          <span>${m.description}</span>
+          <small style="color: #ffcc00;">Reward: $${m.reward} • ${m.time_limit_sec}s</small>
+        </div>
+        <div class="poi-actions">
+          <button class="btn btn-success btn-accept" data-id="${m.id}">START</button>
+        </div>
+      `;
+
+      item.querySelector('.btn-accept')?.addEventListener('click', async () => {
+        try {
+          activeMission = await acceptMission(m.id);
+          startMissionFlow(activeMission);
+        } catch (err) {
+          alert('Could not start mission');
+        }
+      });
+
+      missionBoardElem.appendChild(item);
+    });
+  }
+
+  function startMissionFlow(mission: Mission) {
+    if (!missionHudElem) return;
+    missionHudElem.classList.remove('hidden');
+
+    // Fly map to pickup location
+    villageMap.flyTo(mission.pickup);
+    
+    let timeLeft = mission.time_limit_sec;
+    
+    if (countdownTimer) clearInterval(countdownTimer);
+
+    countdownTimer = window.setInterval(() => {
+      timeLeft--;
+      if (missionHudElem) {
+        missionHudElem.innerHTML = `
+          <strong>ACTIVE: ${mission.title}</strong><br/>
+          <span style="color: ${timeLeft < 20 ? '#ff4d5e' : '#55ff55'}; font-size: 16px;">⏱️ TIME LEFT: ${timeLeft}s</span><br/>
+          <small>Deliver cargo to drop-off point before time runs out!</small>
+        `;
+      }
+
+      if (timeLeft <= 0) {
+        if (countdownTimer) clearInterval(countdownTimer);
+        alert('❌ MISSION FAILED: Time ran out!');
+        missionHudElem.classList.add('hidden');
+        activeMission = null;
+      }
+    }, 1000);
+  }
 });
 
 // WebSocket Connection & Telemetry Handler
@@ -201,13 +287,11 @@ function initWebSocketTracker(villageMap: VillageMap) {
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
     
-    // Handle vehicle telemetry update
     if (data.vehicle_id) {
       const vehicle: VehicleLocation = data;
       villageMap.updateVehicleLocation(vehicle);
     }
 
-    // Handle Geofence Zone Breach Notification
     if (data.geofence_alert) {
       console.warn('Geofence Alert:', data.message);
       alert(`🚨 GEOFENCE ALERT: ${data.message}`);
