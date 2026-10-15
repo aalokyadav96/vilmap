@@ -2,6 +2,7 @@ import maplibregl from 'maplibre-gl';
 import { fetchRoute, POIFeature, POIFeatureCollection, VehicleLocation, Mission } from './api';
 import { IncidentData, PropertyParcel, CameraFeed, BusStop, BusVehicle, Territory } from './types';
 import { InfoCardManager } from './info-card';
+import { startTransitAnimation, startTurfAnimation } from './animations';
 
 export class VillageMap {
   private map: maplibregl.Map;
@@ -264,27 +265,7 @@ export class VillageMap {
       })
       .catch((err) => console.error('Failed to load turf territories:', err));
 
-    this.animateContestedTurfs();
-  }
-
-  private animateContestedTurfs() {
-    let opacity = 0.35;
-    let increasing = false;
-
-    window.setInterval(() => {
-      opacity += increasing ? 0.05 : -0.05;
-      if (opacity >= 0.65) increasing = false;
-      if (opacity <= 0.2) increasing = true;
-
-      if (this.map && this.map.getLayer('turf-fill')) {
-        this.map.setPaintProperty('turf-fill', 'fill-opacity', [
-          'case',
-          ['==', ['get', 'contested'], 1],
-          opacity,
-          0.35,
-        ]);
-      }
-    }, 200);
+    startTurfAnimation(this.map);
   }
 
   private initEmergencyDispatch() {
@@ -503,37 +484,7 @@ export class VillageMap {
       this.busMarkers.push(marker);
     });
 
-    this.animateTransit();
-  }
-
-  private animateTransit() {
-    const tick = () => {
-      this.busVehicles.forEach((vehicle, index) => {
-        const marker = this.busMarkers[index];
-        if (!marker) return;
-
-        vehicle.progress = (vehicle.progress + 0.003) % 1;
-        const current = this.interpolateAlongPath(vehicle.path, vehicle.progress);
-        marker.setLngLat(current);
-      });
-    };
-
-    window.setInterval(tick, 1200);
-  }
-
-  private interpolateAlongPath(path: [number, number][], progress: number): [number, number] {
-    const totalSegments = path.length - 1;
-    const scaled = progress * totalSegments;
-    const segmentIndex = Math.min(Math.floor(scaled), totalSegments - 1);
-    const segmentProgress = scaled - segmentIndex;
-
-    const start = path[segmentIndex];
-    const end = path[Math.min(segmentIndex + 1, path.length - 1)];
-
-    return [
-      start[0] + (end[0] - start[0]) * segmentProgress,
-      start[1] + (end[1] - start[1]) * segmentProgress,
-    ];
+    startTransitAnimation(this.busVehicles, this.busMarkers);
   }
 
   public showMissionMarkers(mission: Mission) {
