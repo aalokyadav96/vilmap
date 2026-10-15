@@ -1,3 +1,5 @@
+// front/src/map.ts
+
 import maplibregl from 'maplibre-gl';
 import { fetchRoute, POIFeature, POIFeatureCollection, VehicleLocation } from './api';
 
@@ -47,16 +49,27 @@ type BusVehicle = {
   progress: number;
 };
 
+type Territory = {
+  id: string;
+  name: string;
+  gang: string;
+  color: string;
+  contested: boolean;
+  polygon: [number, number][];
+};
+
 export class VillageMap {
   private map: maplibregl.Map;
   private selectedDestination: [number, number] | null = null;
   private startLocation: [number, number] = [76.1532, 28.2415];
   private vehicleMarkers: Map<string, maplibregl.Marker> = new Map();
+  private vehicleTrails: Map<string, [number, number][]> = new Map();
   private incidentMarkers: maplibregl.Marker[] = [];
   private cctvMarkers: maplibregl.Marker[] = [];
   private busStopMarkers: maplibregl.Marker[] = [];
   private busMarkers: maplibregl.Marker[] = [];
   private infoCard: HTMLDivElement | null = null;
+
   private propertyData: PropertyParcel[] = [
     {
       id: 'prop-101',
@@ -195,6 +208,8 @@ export class VillageMap {
       this.initPropertyInspection();
       this.initCCTVSystem();
       this.initTransitTracker();
+      this.initTrailSource();
+      this.initTurfLayers();
     });
   }
 
@@ -221,6 +236,124 @@ export class VillageMap {
     });
   }
 
+  private initTrailSource() {
+    this.map.addSource('vehicle-trails', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+
+    this.map.addLayer({
+      id: 'vehicle-trails-layer',
+      type: 'line',
+      source: 'vehicle-trails',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': '#ff4d5e',
+        'line-width': 4,
+        'line-opacity': 0.45,
+      },
+    });
+  }
+
+  private updateTrailData() {
+    const features = Array.from(this.vehicleTrails.entries()).map(([id, coords]) => ({
+      type: 'Feature' as const,
+      properties: { id },
+      geometry: { type: 'LineString' as const, coordinates: coords },
+    }));
+
+    const source = this.map.getSource('vehicle-trails') as maplibregl.GeoJSONSource;
+    if (source) {
+      source.setData({ type: 'FeatureCollection', features });
+    }
+  }
+
+  private initTurfLayers() {
+    fetch('http://localhost:4000/api/turfs')
+      .then((res) => res.json())
+      .then((turfs: Territory[]) => {
+        const features = turfs.map((t) => ({
+          type: 'Feature' as const,
+          properties: {
+            id: t.id,
+            name: t.name,
+            gang: t.gang,
+            color: t.color,
+            contested: t.contested ? 1 : 0,
+          },
+          geometry: {
+            type: 'Polygon' as const,
+            coordinates: [t.polygon],
+          },
+        }));
+
+        this.map.addSource('turf-source', {
+          type: 'geojson',
+          data: { type: 'FeatureCollection', features },
+        });
+
+        this.map.addLayer({
+          id: 'turf-fill',
+          type: 'fill',
+          source: 'turf-source',
+          paint: {
+            'fill-color': ['get', 'color'],
+            'fill-opacity': 0.35,
+          },
+        });
+
+        this.map.addLayer({
+          id: 'turf-outline',
+          type: 'line',
+          source: 'turf-source',
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 2,
+            'line-opacity': 0.8,
+          },
+        });
+
+        this.map.on('click', 'turf-fill', (event) => {
+          const feature = event.features?.[0];
+          if (!feature || !feature.properties) return;
+          const props = feature.properties;
+          this.showInfoCard(
+            String(props.name),
+            `Controlling Gang: ${props.gang}`,
+            `
+              <div class="feature-meta-row">
+                <span class="status-pill type">${props.gang} Territory</span>
+              </div>
+              <div class="feature-meta-box"><strong>Status:</strong> ${props.contested === 1 ? '⚠️ CONTESTED TURF' : 'Secure'}</div>
+            `
+          );
+        });
+      })
+      .catch((err) => console.error('Failed to load turf territories:', err));
+
+    this.animateContestedTurfs();
+  }
+
+  private animateContestedTurfs() {
+    let opacity = 0.35;
+    let increasing = false;
+
+    window.setInterval(() => {
+      opacity += increasing ? 0.05 : -0.05;
+      if (opacity >= 0.65) increasing = false;
+      if (opacity <= 0.2) increasing = true;
+
+      if (this.map && this.map.getLayer('turf-fill')) {
+        this.map.setPaintProperty('turf-fill', 'fill-opacity', [
+          'case',
+          ['==', ['get', 'contested'], 1],
+          opacity,
+          0.35,
+        ]);
+      }
+    }, 200);
+  }
+
   private initEmergencyDispatch() {
     this.incidentData.forEach((incident) => {
       const el = document.createElement('div');
@@ -239,12 +372,8 @@ export class VillageMap {
               <span class="status-pill type">${incident.type}</span>
             </div>
             <p>${incident.description}</p>
-            <div class="feature-meta-box">
-              <strong>Dispatch Status:</strong> Crew en route
-            </div>
-            <div class="feature-meta-box">
-              <strong>Location:</strong> ${incident.coords[0].toFixed(4)}, ${incident.coords[1].toFixed(4)}
-            </div>
+            <div class="feature-meta-box"><strong>Dispatch Status:</strong> Crew en route</div>
+            <div class="feature-meta-box"><strong>Location:</strong> ${incident.coords[0].toFixed(4)}, ${incident.coords[1].toFixed(4)}</div>
           `
         );
       });
@@ -385,6 +514,8 @@ export class VillageMap {
     });
   }
 
+  // Replace the initTransitTracker method inside VillageMap in front/src/map.ts
+
   private initTransitTracker() {
     this.busStops.forEach((stop) => {
       const el = document.createElement('div');
@@ -414,8 +545,29 @@ export class VillageMap {
       const el = document.createElement('div');
       el.className = 'bus-vehicle-marker';
       el.style.background = vehicle.color;
+      el.style.transformOrigin = 'center center';
+      el.style.transition = 'transform 1s linear';
       el.innerHTML = '🚌';
       el.title = `${vehicle.route} bus`;
+
+      // Add click listener to show bus and route details
+      el.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const pathStops = vehicle.path.map((coord, idx) => `<li>Waypoint ${idx + 1}: ${coord[0].toFixed(4)}, ${coord[1].toFixed(4)}</li>`).join('');
+        this.showInfoCard(
+          `Bus Unit: ${vehicle.id.toUpperCase()}`,
+          `Route Line: ${vehicle.route}`,
+          `
+            <div class="feature-meta-row">
+              <span class="status-pill type" style="background:${vehicle.color}; color:#000;">Active Transit</span>
+            </div>
+            <div class="feature-meta-box"><strong>Route Name:</strong> ${vehicle.route}</div>
+            <div class="feature-meta-box"><strong>Current Progress:</strong> ${(vehicle.progress * 100).toFixed(0)}% along path</div>
+            <div class="feature-meta-box"><strong>Waypoint Itinerary:</strong></div>
+            <ul class="eta-list" style="max-height: 100px; overflow-y: auto;">${pathStops}</ul>
+          `
+        );
+      });
 
       const marker = new maplibregl.Marker({ element: el }).setLngLat(vehicle.path[0]).addTo(this.map);
       this.busMarkers.push(marker);
@@ -486,7 +638,6 @@ export class VillageMap {
     this.infoCard.classList.remove('hidden');
   }
 
-  // Load POI markers onto map
   public loadPOIs(poiCollection: POIFeatureCollection, onSelectPOI: (poi: POIFeature) => void) {
     poiCollection.features.forEach((poi) => this.addPOIMarker(poi, onSelectPOI));
   }
@@ -520,13 +671,22 @@ export class VillageMap {
   public updateVehicleLocation(v: VehicleLocation) {
     let marker = this.vehicleMarkers.get(v.vehicle_id);
 
+    // Update trail breadcrumbs
+    let trail = this.vehicleTrails.get(v.vehicle_id) || [];
+    trail.push([v.lng, v.lat]);
+    if (trail.length > 25) trail.shift();
+    this.vehicleTrails.set(v.vehicle_id, trail);
+    this.updateTrailData();
+
     if (!marker) {
       const el = document.createElement('div');
       el.className = 'vehicle-marker';
+      el.style.transformOrigin = 'center center';
+      el.style.transition = 'transform 0.8s linear';
 
       marker = new maplibregl.Marker({ element: el })
         .setLngLat([v.lng, v.lat])
-        .setPopup(new maplibregl.Popup().setText(`Patrol Unit: ${v.speed} km/h`))
+        .setPopup(new maplibregl.Popup().setText(`Unit ${v.vehicle_id}: ${v.speed} km/h`))
         .addTo(this.map);
 
       this.vehicleMarkers.set(v.vehicle_id, marker);

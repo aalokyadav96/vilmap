@@ -1,3 +1,5 @@
+// front/src/main.ts
+
 import { createPOI, fetchPOIs, POIFeature, VehicleLocation } from './api';
 import { VillageMap } from './map';
 
@@ -26,7 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const createForm = document.getElementById('create-poi-form') as HTMLFormElement;
   const coordsInput = document.getElementById('poi-coords') as HTMLInputElement;
 
-  // 1. Connect WebSocket Tracker
+  // 1. Connect WebSocket Tracker with Telemetry HUD Updates
   initWebSocketTracker(villageMap);
 
   // 2. Fetch Initial POIs
@@ -47,8 +49,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   villageMap.setMapClickListener((coords) => {
     if (destLabel) destLabel.innerText = `Custom Location (${coords[1].toFixed(4)}, ${coords[0].toFixed(4)})`;
     if (btnRoute) btnRoute.disabled = false;
-
-    // Pre-fill creation modal input
     if (coordsInput) coordsInput.value = `${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}`;
   });
 
@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
 
       item.addEventListener('click', (e) => {
-        // Handle Photo button click separately
         if ((e.target as HTMLElement).classList.contains('btn-photo')) {
           e.stopPropagation();
           openPhotoGallery(poi);
@@ -172,7 +171,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const created = await createPOI(newPOI);
       allPOIs.push(created);
 
-      // Add to map & refresh directory
       villageMap.addPOIMarker(created, (selected) => selectPOIForRouting(selected));
       renderPOIDirectory(allPOIs);
 
@@ -184,12 +182,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Buttons
   btnRoute?.addEventListener('click', () => villageMap.drawRouteToSelected());
   btnClear?.addEventListener('click', () => villageMap.clearRoute());
 });
 
-// WebSocket Connection Helper
+// WebSocket Connection & Telemetry Handler
 function initWebSocketTracker(villageMap: VillageMap) {
   const statusElem = document.getElementById('ws-status');
   const ws = new WebSocket('ws://localhost:4000/ws');
@@ -202,8 +199,19 @@ function initWebSocketTracker(villageMap: VillageMap) {
   };
 
   ws.onmessage = (event) => {
-    const vehicle: VehicleLocation = JSON.parse(event.data);
-    villageMap.updateVehicleLocation(vehicle);
+    const data = JSON.parse(event.data);
+    
+    // Handle vehicle telemetry update
+    if (data.vehicle_id) {
+      const vehicle: VehicleLocation = data;
+      villageMap.updateVehicleLocation(vehicle);
+    }
+
+    // Handle Geofence Zone Breach Notification
+    if (data.geofence_alert) {
+      console.warn('Geofence Alert:', data.message);
+      alert(`🚨 GEOFENCE ALERT: ${data.message}`);
+    }
   };
 
   ws.onclose = () => {

@@ -1,3 +1,5 @@
+// models/geo.go
+
 package models
 
 type GeometryPoint struct {

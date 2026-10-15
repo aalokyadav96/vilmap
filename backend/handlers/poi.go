@@ -1,3 +1,5 @@
+// handlers/poi.go
+
 package handlers
 
 import (

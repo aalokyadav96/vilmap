@@ -1,3 +1,5 @@
+// main.go
+
 package main
 
 import (
@@ -31,12 +33,14 @@ func main() {
 	poiHandler := handlers.NewPOIHandler()
 	routeHandler := handlers.NewRouteHandler()
 	trackerHandler := handlers.NewTrackerHandler()
+	turfHandler := handlers.NewTurfHandler()
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/pois", poiHandler.GetPOIs)
 		r.Post("/pois", poiHandler.CreatePOI)
 		r.Get("/pois/{id}", poiHandler.GetPOIByID)
 		r.Get("/route", routeHandler.CalculateRoute)
+		r.Get("/api/turfs", turfHandler.GetTurfs)
 	})
 
 	// WebSocket endpoint for real-time tracking
