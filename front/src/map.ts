@@ -1,67 +1,14 @@
-// front/src/map.ts
-
 import maplibregl from 'maplibre-gl';
 import { fetchRoute, POIFeature, POIFeatureCollection, VehicleLocation, Mission } from './api';
-
-type IncidentSeverity = 'critical' | 'warning' | 'info';
-
-type IncidentData = {
-  id: string;
-  title: string;
-  description: string;
-  type: 'Emergency' | 'Utility' | 'Traffic';
-  severity: IncidentSeverity;
-  coords: [number, number];
-  icon: string;
-};
-
-type PropertyParcel = {
-  id: string;
-  name: string;
-  owner: string;
-  taxStatus: string;
-  utilities: string[];
-  value: string;
-  polygon: [number, number][];
-  height: number;
-};
-
-type CameraFeed = {
-  id: string;
-  title: string;
-  zone: string;
-  coords: [number, number];
-  status: 'LIVE' | 'STANDBY';
-};
-
-type BusStop = {
-  id: string;
-  name: string;
-  coords: [number, number];
-  eta: number[];
-};
-
-type BusVehicle = {
-  id: string;
-  route: string;
-  color: string;
-  path: [number, number][];
-  progress: number;
-};
-
-type Territory = {
-  id: string;
-  name: string;
-  gang: string;
-  color: string;
-  contested: boolean;
-  polygon: [number, number][];
-};
+import { IncidentData, PropertyParcel, CameraFeed, BusStop, BusVehicle, Territory } from './types';
+import { InfoCardManager } from './info-card';
 
 export class VillageMap {
   private map: maplibregl.Map;
+  private infoManager = new InfoCardManager();
   private selectedDestination: [number, number] | null = null;
   private startLocation: [number, number] = [76.1532, 28.2415];
+  
   private vehicleMarkers: Map<string, maplibregl.Marker> = new Map();
   private vehicleTrails: Map<string, [number, number][]> = new Map();
   private incidentMarkers: maplibregl.Marker[] = [];
@@ -69,7 +16,6 @@ export class VillageMap {
   private busStopMarkers: maplibregl.Marker[] = [];
   private busMarkers: maplibregl.Marker[] = [];
   private missionMarkers: maplibregl.Marker[] = [];
-  private infoCard: HTMLDivElement | null = null;
 
   private propertyData: PropertyParcel[] = [
     {
@@ -80,11 +26,8 @@ export class VillageMap {
       utilities: ['Power', 'Water', 'Fiber'],
       value: '$1.2M',
       polygon: [
-        [76.1505, 28.2415],
-        [76.1518, 28.2415],
-        [76.1518, 28.2428],
-        [76.1505, 28.2428],
-        [76.1505, 28.2415],
+        [76.1505, 28.2415], [76.1518, 28.2415],
+        [76.1518, 28.2428], [76.1505, 28.2428], [76.1505, 28.2415],
       ],
       height: 28,
     },
@@ -96,11 +39,8 @@ export class VillageMap {
       utilities: ['Power', 'Gas', 'Water'],
       value: '$920K',
       polygon: [
-        [76.1568, 28.2432],
-        [76.1588, 28.2432],
-        [76.1588, 28.2448],
-        [76.1568, 28.2448],
-        [76.1568, 28.2432],
+        [76.1568, 28.2432], [76.1588, 28.2432],
+        [76.1588, 28.2448], [76.1568, 28.2448], [76.1568, 28.2432],
       ],
       height: 22,
     },
@@ -112,11 +52,8 @@ export class VillageMap {
       utilities: ['Power', 'Water', 'Internet'],
       value: '$1.8M',
       polygon: [
-        [76.1528, 28.2394],
-        [76.1552, 28.2394],
-        [76.1552, 28.2408],
-        [76.1528, 28.2408],
-        [76.1528, 28.2394],
+        [76.1528, 28.2394], [76.1552, 28.2394],
+        [76.1552, 28.2408], [76.1528, 28.2408], [76.1528, 28.2394],
       ],
       height: 18,
     },
@@ -170,11 +107,8 @@ export class VillageMap {
       route: 'River Loop',
       color: '#46d2ff',
       path: [
-        [76.1514, 28.2422],
-        [76.1533, 28.2428],
-        [76.1549, 28.2444],
-        [76.1567, 28.2437],
-        [76.1558, 28.2402],
+        [76.1514, 28.2422], [76.1533, 28.2428],
+        [76.1549, 28.2444], [76.1567, 28.2437], [76.1558, 28.2402],
       ],
       progress: 0.15,
     },
@@ -183,10 +117,8 @@ export class VillageMap {
       route: 'School Shuttle',
       color: '#ffcc00',
       path: [
-        [76.1561, 28.2434],
-        [76.1550, 28.2428],
-        [76.1521, 28.2419],
-        [76.1498, 28.2411],
+        [76.1561, 28.2434], [76.1550, 28.2428],
+        [76.1521, 28.2419], [76.1498, 28.2411],
       ],
       progress: 0.58,
     },
@@ -318,7 +250,7 @@ export class VillageMap {
           const feature = event.features?.[0];
           if (!feature || !feature.properties) return;
           const props = feature.properties;
-          this.showInfoCard(
+          this.infoManager.showInfoCard(
             String(props.name),
             `Controlling Gang: ${props.gang}`,
             `
@@ -364,9 +296,9 @@ export class VillageMap {
 
       el.addEventListener('click', (event) => {
         event.stopPropagation();
-        this.showInfoCard(
+        this.infoManager.showInfoCard(
           incident.title,
-          `${incident.type} • ${incident.severity.toUpperCase()}`,
+          `${incident.type} - ${incident.severity.toUpperCase()}`,
           `
             <div class="feature-meta-row">
               <span class="status-pill ${incident.severity}">${incident.severity}</span>
@@ -445,7 +377,7 @@ export class VillageMap {
       if (!parcel) return;
 
       this.setPropertyHighlight(parcelId);
-      this.showInfoCard(
+      this.infoManager.showInfoCard(
         parcel.name,
         'Property inspection report',
         `
@@ -464,8 +396,9 @@ export class VillageMap {
 
   private setPropertyHighlight(propertyId: string) {
     const selected = this.propertyData.find((parcel) => parcel.id === propertyId);
+    const source = this.map.getSource('property-highlight-source') as maplibregl.GeoJSONSource;
+
     if (!selected) {
-      const source = this.map.getSource('property-highlight-source') as maplibregl.GeoJSONSource;
       source?.setData({ type: 'FeatureCollection', features: [] });
       return;
     }
@@ -482,7 +415,6 @@ export class VillageMap {
       },
     };
 
-    const source = this.map.getSource('property-highlight-source') as maplibregl.GeoJSONSource;
     source?.setData({ type: 'FeatureCollection', features: [feature] });
   }
 
@@ -495,9 +427,9 @@ export class VillageMap {
 
       el.addEventListener('click', (event) => {
         event.stopPropagation();
-        this.showInfoCard(
+        this.infoManager.showInfoCard(
           camera.title,
-          `${camera.zone} • ${camera.status}`,
+          `${camera.zone} - ${camera.status}`,
           `
             <div class="cctv-feed">
               <div class="feed-scanline"></div>
@@ -525,7 +457,7 @@ export class VillageMap {
       el.addEventListener('click', (event) => {
         event.stopPropagation();
         const etaList = stop.eta.map((value, index) => `<li>Stop ${index + 1}: ${value} min</li>`).join('');
-        this.showInfoCard(
+        this.infoManager.showInfoCard(
           stop.name,
           'Transit status',
           `
@@ -552,7 +484,7 @@ export class VillageMap {
       el.addEventListener('click', (event) => {
         event.stopPropagation();
         const pathStops = vehicle.path.map((coord, idx) => `<li>Waypoint ${idx + 1}: ${coord[0].toFixed(4)}, ${coord[1].toFixed(4)}</li>`).join('');
-        this.showInfoCard(
+        this.infoManager.showInfoCard(
           `Bus Unit: ${vehicle.id.toUpperCase()}`,
           `Route Line: ${vehicle.route}`,
           `
@@ -605,10 +537,8 @@ export class VillageMap {
   }
 
   public showMissionMarkers(mission: Mission) {
-    // Clear old mission markers if any
     this.clearMissionMarkers();
 
-    // Pickup Marker
     const pickupEl = document.createElement('div');
     pickupEl.className = 'mission-marker pickup';
     pickupEl.innerHTML = '📦';
@@ -619,7 +549,6 @@ export class VillageMap {
       .addTo(this.map);
     this.missionMarkers.push(pickupMarker);
 
-    // Dropoff Marker
     const dropoffEl = document.createElement('div');
     dropoffEl.className = 'mission-marker dropoff';
     dropoffEl.innerHTML = '🏁';
@@ -634,38 +563,6 @@ export class VillageMap {
   public clearMissionMarkers() {
     this.missionMarkers.forEach((m) => m.remove());
     this.missionMarkers = [];
-  }
-
-  private showInfoCard(title: string, subtitle: string, body: string) {
-    if (!this.infoCard) {
-      const card = document.createElement('div');
-      card.className = 'feature-info-card hidden';
-      card.innerHTML = `
-        <div class="feature-info-header">
-          <div>
-            <h3></h3>
-            <p></p>
-          </div>
-          <button type="button" aria-label="Close panel">×</button>
-        </div>
-        <div class="feature-info-body"></div>
-      `;
-
-      const closeButton = card.querySelector('button');
-      closeButton?.addEventListener('click', () => card.classList.add('hidden'));
-      document.body.appendChild(card);
-      this.infoCard = card;
-    }
-
-    const header = this.infoCard.querySelector('h3');
-    const subheader = this.infoCard.querySelector('p');
-    const bodyEl = this.infoCard.querySelector('.feature-info-body');
-
-    if (header) header.textContent = title;
-    if (subheader) subheader.textContent = subtitle;
-    if (bodyEl) bodyEl.innerHTML = body;
-
-    this.infoCard.classList.remove('hidden');
   }
 
   public loadPOIs(poiCollection: POIFeatureCollection, onSelectPOI: (poi: POIFeature) => void) {
@@ -701,7 +598,6 @@ export class VillageMap {
   public updateVehicleLocation(v: VehicleLocation) {
     let marker = this.vehicleMarkers.get(v.vehicle_id);
 
-    // Update trail breadcrumbs
     let trail = this.vehicleTrails.get(v.vehicle_id) || [];
     trail.push([v.lng, v.lat]);
     if (trail.length > 25) trail.shift();
