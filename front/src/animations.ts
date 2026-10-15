@@ -16,45 +16,45 @@ export function interpolateAlongPath(path: [number, number][], progress: number)
   ];
 }
 
+export function getNextTransitProgress(path: [number, number][], currentProgress: number): number {
+  const totalSegments = Math.max(path.length - 1, 1);
+  const stepSize = 1 / totalSegments;
+  return (currentProgress + stepSize) % 1;
+}
+
 /**
- * Smooth 60fps transit animation using requestAnimationFrame and delta-time.
+ * Moves each bus a discrete route step on a timer so the marker remains clickable.
  */
 export function startTransitAnimation(
   busVehicles: BusVehicle[],
   busMarkers: maplibregl.Marker[]
 ) {
-  let lastTime = performance.now();
-  const speedFactor = 0.000065;
+  const stepIntervalMs = 1500;
 
-  const animate = (currentTime: number) => {
-    const deltaTime = Math.min(currentTime - lastTime, 40);
-    lastTime = currentTime;
+  const moveBus = (vehicle: BusVehicle, index: number) => {
+    const marker = busMarkers[index];
+    if (!marker) return;
 
-    busVehicles.forEach((vehicle, index) => {
-      const marker = busMarkers[index];
-      if (!marker) return;
+    const nextProgress = getNextTransitProgress(vehicle.path, vehicle.progress);
+    vehicle.progress = nextProgress;
 
-      const nextProgress = (vehicle.progress + deltaTime * speedFactor) % 1;
-      vehicle.progress = nextProgress;
+    const current = interpolateAlongPath(vehicle.path, nextProgress);
+    marker.setLngLat(current);
 
-      const current = interpolateAlongPath(vehicle.path, nextProgress);
-      marker.setLngLat(current);
-
-      const markerEl = marker.getElement();
-      const busIcon = markerEl?.querySelector('.bus-vehicle-marker-inner') as HTMLElement | null;
-      if (busIcon) {
-        const nextPoint = interpolateAlongPath(vehicle.path, (nextProgress + 0.02) % 1);
-        const dx = nextPoint[0] - current[0];
-        const dy = nextPoint[1] - current[1];
-        const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
-        busIcon.style.transform = `rotate(${angle}deg)`;
-      }
-    });
-
-    requestAnimationFrame(animate);
+    const markerEl = marker.getElement();
+    const busIcon = markerEl?.querySelector('.bus-vehicle-marker-inner') as HTMLElement | null;
+    if (busIcon) {
+      const nextPoint = interpolateAlongPath(vehicle.path, getNextTransitProgress(vehicle.path, nextProgress));
+      const dx = nextPoint[0] - current[0];
+      const dy = nextPoint[1] - current[1];
+      const angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+      busIcon.style.transform = `rotate(${angle}deg)`;
+    }
   };
 
-  requestAnimationFrame(animate);
+  return window.setInterval(() => {
+    busVehicles.forEach((vehicle, index) => moveBus(vehicle, index));
+  }, stepIntervalMs);
 }
 
 /**
